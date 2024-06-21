@@ -66,9 +66,9 @@ router.post("/bookingRoom", async (req, res) => {
 });
 
 // List all booked rooms
-router.get('/bookingroom-list', async (req, res) => {
+router.get('/bookingroomList', async (req, res) => {
     try {
-        const bookingRooms = await Booking.find({}).populate('room');
+        const bookingRooms = await RoomBooking.find({}).populate("room");
         res.status(200).json({ data: bookingRooms });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -109,7 +109,7 @@ router.get("/bookingRoom/:customerName/bookings", async (req, res) => {
 });
 
 // status updated 
-router.put("/bookingRoom/:bookingId/bookings", async (req, res) => {
+router.put("/bookingRoom/:bookingId/status", async (req, res) => {
     try {
         const bookingId = req.params.bookingId;
         const { status } = req.body; // The new status should be passed in the request body
@@ -120,10 +120,9 @@ router.put("/bookingRoom/:bookingId/bookings", async (req, res) => {
         }
 
         // Find the booking and update the status
-        const updatedBooking = await BookedRoom.findByIdAndUpdate({
-            bookingId,
-            status,
-            new: true // Return the updated document
+        const updatedBooking = await RoomBooking.findByIdAndUpdate( bookingId, req.body, {
+            new: true, // Return the updated document
+            runValidators: true
         });
 
         if (!updatedBooking) {
