@@ -18,37 +18,57 @@ router.post("/createdRoom", async (req, res) => {
 // booking room
 router.post("/bookingRoom", async (req, res) => {
     try {
-        const { customer, roomIds, startTimes, endTimes, bookingDate } = req.body;
+        const { customer, bookingDate, startTimes, endTimes, roomIds } = req.body;
 
-        const exisitingBookings = await RoomBooking.find({
-            room: roomIds,
+        // Validate required fields
+        if (!customer || !bookingDate || !startTimes || !endTimes || !roomIds) {
+            return res.status(400).json({ message: 'All fields are required.' });
+        }
+
+        // Parse bookingDate to a valid Date object
+        const parsedBookingDate = new Date(bookingDate);
+        const parsedStartTime = new Date(startTimes);
+        const parsedEndTime = new Date(endTimes);
+
+        if (isNaN(parsedBookingDate.getTime()) || isNaN(parsedStartTime.getTime()) || isNaN(parsedEndTime.getTime())) {
+            return res.status(400).json({ message: 'Invalid date format. Use ISO 8601 format for dates.' });
+        }
+
+        // Check for existing bookings that overlap with the requested times
+        const existingBookings = await RoomBooking.find({
+            room: { $in: roomIds },
             $or: [
-                { startTime: { $lt: endTimes, $gte: startTimes } },
-                { endTime: { $lte: endTimes, gt: startTimes } }
+                { startTime: { $lt: parsedEndTime, $gte: parsedStartTime } },
+                { endTime: { $gt: parsedStartTime, $lte: parsedEndTime } }
             ]
         });
-        if (exisitingBookings.length > 0) {
-            res.status(400).json({ message: 'Room is already booked for the selected time.' });
+
+        if (existingBookings.length > 0) {
+            return res.status(400).json({ message: 'Room is already booked for the selected time.' });
         }
+
+        // Create a new booking
         const bookedRoom = new RoomBooking({
             customerName: customer,
             room: roomIds,
-            bookingDate: new Date.now(bookingDate).toString(),
-            startTime: new Date.now(startTimes),
-            endTime: new Date.now(endTimes),
+            bookingDate: parsedBookingDate,
+            startTime: parsedStartTime,
+            endTime: parsedEndTime,
             status: 'confirmed'
         });
+
         await bookedRoom.save();
-        res.status(200).json({ message: "Room was succefully booked" })
+
+        res.status(200).json({ message: "Room was successfully booked" });
     } catch (error) {
-        res.status(500).json({ errorMsg: error.message })
+        res.status(500).json({ errorMsg: error.message });
     }
 });
 
 // List all booked rooms
-router.get('/bookingroom-list', async (req, res) => {
+router.get('/bookingroomList', async (req, res) => {
     try {
-        const bookingRooms = await Booking.find({}).populate('room');
+        const bookingRooms = await RoomBooking.find({}).populate("room");
         res.status(200).json({ data: bookingRooms });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -66,12 +86,12 @@ router.get("/rooms/:roomId/bookings", async (req, res) => {
     }
 });
 
-
-// List out cutomer wise room booked lists 
-router.get("/bookingRoom/:cutomerName/bookings", async (req, res) => {
+// List out customer-wise room booked lists
+router.get("/bookingRoom/:customerName/bookings", async (req, res) => {
     try {
-        const cutomerName = req.params.cutomerName;
-        const bookings = await RoomBooking.find({ cutomerName }).populate("room");
+        const customerName = req.params.customerName;
+        const bookings = await RoomBooking.find({ customerName }).populate("room");
+
         const formattedBookings = bookings.map((data) => ({
             bookingId: data._id,
             customerName: data.customerName,
@@ -81,7 +101,8 @@ router.get("/bookingRoom/:cutomerName/bookings", async (req, res) => {
             endTime: data.endTime.toISOString(),
             status: data.status,
         }));
-        res.status(200).json({ data: formattedBookings })
+
+        res.status(200).json({ data: formattedBookings });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -98,9 +119,8 @@ router.put("/bookingRoom/:bookingId/status", async (req, res) => {
             return res.status(400).json({ message: 'Invalid status' });
         }
         // Find the booking and update the status
-        const updatedBooking = await BookedRoom.findByIdAndUpdate(bookingId, status, {
-            // Return the updated document
-            new: true,
+        const updatedBooking = await RoomBooking.findByIdAndUpdate(bookingId, req.body, {
+            new: true, // Return the updated document
             runValidators: true
         });
         if (!updatedBooking) {
@@ -112,4 +132,4 @@ router.put("/bookingRoom/:bookingId/status", async (req, res) => {
     }
 })
 
-module.express = router;
+module.exports = router;
