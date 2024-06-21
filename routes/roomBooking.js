@@ -88,27 +88,24 @@ router.get("/bookingRoom/:cutomerName/bookings", async (req, res) => {
 });
 
 // status updated 
-router.put("/bookingRoom/:bookingId/bookings", async (req, res) => {
+router.put("/bookingRoom/:bookingId/status", async (req, res) => {
     try {
         const bookingId = req.params.bookingId;
-        const { status } = req.body; // The new status should be passed in the request body
-
+        // The new status should be passed in the request body
+        const { status } = req.body;
         // Check if the status is valid
         if (!['pending', 'confirmed', 'canceled'].includes(status)) {
             return res.status(400).json({ message: 'Invalid status' });
         }
-
         // Find the booking and update the status
-        const updatedBooking = await BookedRoom.findByIdAndUpdate({
-            bookingId,
-            status,
-            new: true // Return the updated document
+        const updatedBooking = await BookedRoom.findByIdAndUpdate(bookingId, status, {
+            // Return the updated document
+            new: true,
+            runValidators: true
         });
-
         if (!updatedBooking) {
             return res.status(404).json({ message: 'Booking not found' });
         }
-
         res.status(200).json({ data: updatedBooking });
     } catch (error) {
         res.status(500).json({ message: error.message });
