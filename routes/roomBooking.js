@@ -4,7 +4,7 @@ const RoomBooking = require("../models/bookingRoom");
 
 const router = express.Router();
 
-// room created
+// Creating a room
 router.post("/createdRoom", async (req, res) => {
     try {
         const room = new Room(req.body);
@@ -15,7 +15,7 @@ router.post("/createdRoom", async (req, res) => {
     }
 });
 
-// booking room
+// Booking a room
 router.post("/bookingRoom", async (req, res) => {
     try {
         const { customer, bookingDate, startTimes, endTimes, roomIds } = req.body;
@@ -65,17 +65,8 @@ router.post("/bookingRoom", async (req, res) => {
     }
 });
 
-// List all booked rooms
-router.get('/bookingroomList', async (req, res) => {
-    try {
-        const bookingRooms = await RoomBooking.find({}).populate("room");
-        res.status(200).json({ data: bookingRooms });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
 
-// List out specific room booked lists 
+// List all booked rooms based on roomId
 router.get("/rooms/:roomId/bookings", async (req, res) => {
     try {
         const roomId = req.params.roomId;
@@ -86,7 +77,18 @@ router.get("/rooms/:roomId/bookings", async (req, res) => {
     }
 });
 
-// List out customer-wise room booked lists
+
+// List all rooms with booked data
+router.get('/bookingroomList', async (req, res) => {
+    try {
+        const bookingRooms = await RoomBooking.find({}).populate("room");
+        res.status(200).json({ data: bookingRooms });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// List how many times customer has booked the room
 router.get("/bookingRoom/:customerName/bookings", async (req, res) => {
     try {
         const customerName = req.params.customerName;
@@ -95,7 +97,7 @@ router.get("/bookingRoom/:customerName/bookings", async (req, res) => {
         const formattedBookings = bookings.map((data) => ({
             bookingId: data._id,
             customerName: data.customerName,
-            roomName: data.room.name,
+            room: data.room ? data.room : "Unknown Room",
             bookingDate: data.bookingDate.toISOString(),
             startTime: data.startTime.toISOString(),
             endTime: data.endTime.toISOString(),
