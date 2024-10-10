@@ -11,6 +11,10 @@ const PORT = process.env.PORT;
 
 app.use("/api", roomBookingRouter);
 
+app.get("/", (req, res) => {
+    res.json({ message: "Hall Booking Deployed successfully" });
+})
+
 mongoose.connect(process.env.MONGODB).then(() => {
     console.log("MongoDB conneted");
     app.listen(PORT, () => {
